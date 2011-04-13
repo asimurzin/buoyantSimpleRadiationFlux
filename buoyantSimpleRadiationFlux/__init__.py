@@ -23,4 +23,69 @@
 ##
 
 
-#-----------------------------------------------------------------
+#--------------------------------------------------------------------------------------------
+argv = None
+import sys, os
+
+# Check is the pythonFlu installed
+try:
+   import Foam
+   pass
+except ImportError:
+   print 
+   print "You must install pythonFlu first( http://sourceforge.net/projects/pythonflu/files/)" 
+   print
+   os._exit( os.EX_UNAVAILABLE )
+   pass
+
+
+#--------------------------------------------------------------------------------------
+from Foam import FOAM_VERSION, FOAM_BRANCH_VERSION,FOAM_REF_VERSION
+if FOAM_VERSION( "<=", "010401" ):
+    from Foam.OpenFOAM import ext_Info
+    ext_Info() << "\n\n To use this solver, it is necessary to SWIG OpenFOAM-1.5 or higher\n"    
+    pass
+
+
+#----------------------------------------------------------------------------------------------
+if FOAM_REF_VERSION( "==", "010500" ):
+    from buoyantSimpleRadiationFlux.r1_5 import *
+    pass
+
+
+#----------------------------------------------------------------------------------------------
+if FOAM_BRANCH_VERSION( "dev", "==", "010500" ):
+    from buoyantSimpleRadiationFlux.r1_5 import *
+    pass
+
+#---------------------------------------------------------------------------------------------
+if FOAM_REF_VERSION( "==", "010600" ):
+    from buoyantSimpleRadiationFlux.r1_6 import *
+    pass
+
+
+#--------------------------------------------------------------------------------------
+if FOAM_BRANCH_VERSION( "dev",">=", "010600" ):
+    from buoyantSimpleRadiationFlux.r1_6_dev import *
+    pass
+
+
+#--------------------------------------------------------------------------------------
+if FOAM_REF_VERSION( ">=", "010700" ):
+    from buoyantSimpleRadiationFlux.r1_7_0 import *
+    pass
+
+
+#--------------------------------------------------------------------------------------
+def entry_point():
+    import sys; argv = sys.argv
+    return main_standalone( len( argv ), argv )
+
+
+#--------------------------------------------------------------------------------------
+if __name__ == "__main__" :
+    entry_point()
+    pass
+    
+    
+#--------------------------------------------------------------------------------------
