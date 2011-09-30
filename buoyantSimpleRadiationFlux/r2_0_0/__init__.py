@@ -50,18 +50,17 @@ def createFields( runTime, mesh, g ):
     
     pThermo = man.basicPsiThermo.New( mesh );
 
-    field = pThermo.rho()
     from Foam.OpenFOAM import word, fileName, IOobject
     rho = man.volScalarField( man.IOobject( word( "rho" ), 
                                             fileName( runTime.timeName() ),
                                             mesh, 
                                             IOobject.NO_READ, 
                                             IOobject.NO_WRITE ),
-                              man.volScalarField( field, man.Deps( pThermo ) ) );
+                              man( pThermo.rho(), man.Deps( pThermo ) ) );
     
-    p = man.volScalarField( pThermo.p(), man.Deps( pThermo ) )
-    h = man.volScalarField( pThermo.h(), man.Deps( pThermo ) )
-    psi = man.volScalarField( pThermo.psi(), man.Deps( pThermo ) )
+    p = man( pThermo.p(), man.Deps( pThermo ) )
+    h = man( pThermo.h(), man.Deps( pThermo ) )
+    psi = man( pThermo.psi(), man.Deps( pThermo ) )
     
     ext_Info() << "Reading field U\n" << nl
     U = man.volVectorField( man.IOobject( word( "U" ),
@@ -71,17 +70,16 @@ def createFields( runTime, mesh, g ):
                                           IOobject.AUTO_WRITE ),
                               mesh )
     
-    phi = man.compressibleCreatePhi( runTime, mesh, U, rho );
+    phi = man.compressibleCreatePhi( runTime, mesh, rho, U );
 
     ext_Info() << "Creating turbulence model\n" << nl
     turbulence = man.compressible.RASModel.New( rho, U,  phi, pThermo );
 
     ext_Info()<< "Calculating field g.h\n" << nl
     
-    field = g & mesh.C()                                                                                   #####################
-    gh = man.volScalarField( word( "gh" ), man.volScalarField( field, man.Deps( mesh ) ) )                 #We should discuss it
-    field = g & mesh.Cf()                                                                                  #
-    ghf = man.surfaceScalarField( word( "ghf" ), man.surfaceScalarField( field, man.Deps( mesh ) ) )       ##################################    
+    gh = man.volScalarField( word( "gh" ), man( g & mesh.C(), man.Deps( mesh ) ) )
+    ghf = man.surfaceScalarField( word( "ghf" ), man( g & mesh.Cf(), man.Deps( mesh ) ) )
+    
     ext_Info() << "Reading field p_rgh\n" << nl
     p_rgh = man.volScalarField( man.IOobject( word( "p_rgh" ),
                                               fileName( runTime.timeName() ),
@@ -107,7 +105,7 @@ def createFields( runTime, mesh, g ):
 
 #--------------------------------------------------------------------------------------
 def fun_Ueqn( simple, mesh, rho, U, phi, turbulence, ghf, p_rgh ):
-    UEqn = man.fvm.div( phi, U ) + man.fvVectorMatrix( turbulence.divDevRhoReff( U() ), man.Deps( turbulence, U) )
+    UEqn = man.fvm.div( phi, U ) + man( turbulence.divDevRhoReff( U ), man.Deps( turbulence, U) )
     
     UEqn.relax()
  
@@ -211,7 +209,7 @@ def main_standalone( argc, argv ):
 
     mesh = man.createMesh( runTime )
     
-    g = readGravitationalAcceleration( runTime(), mesh() )
+    g = readGravitationalAcceleration( runTime, mesh )
 
     pThermo, rho, p, h, psi, U, phi, turbulence, gh, ghf, p_rgh, \
          pRefCell, pRefValue, initialMass, totalVolume = createFields( runTime, mesh, g )
