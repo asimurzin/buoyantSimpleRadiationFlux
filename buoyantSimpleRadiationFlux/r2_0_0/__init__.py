@@ -85,7 +85,7 @@ def createFields( runTime, mesh, g ):
                                               ref.IOobject.AUTO_WRITE ),
                                 mesh );
     # Force p_rgh to be consistent with p
-    p_rgh.ext_assign( p - rho * gh )
+    p_rgh <<= p - rho * gh
     
     pRefCell = 0
     pRefValue = 0.0
@@ -127,23 +127,23 @@ def fun_hEqn( thermo, rho, p, h, phi, radiation, turbulence ):
 def fun_pEqn( mesh, runTime, simple, thermo, rho, p, h, psi, U, phi, turbulence, \
                       gh, ghf, p_rgh, UEqn, pRefCell, pRefValue, cumulativeContErr, initialMass):
       
-      rho().ext_assign( thermo.rho() )
+      rho <<= thermo.rho()
       rho.relax()
 
       rAU = 1.0 / UEqn.A()
       rhorAUf = ref.surfaceScalarField( ref.word( "(rho*(1|A(U)))" ), ref.fvc.interpolate( rho() * rAU ) )
       
-      U().ext_assign( rAU * UEqn.H() )
+      U <<= rAU * UEqn.H()
       
       #UEqn.clear()
       
-      phi().ext_assign( ref.fvc.interpolate( rho ) * ( ref.fvc.interpolate( U() ) & mesh.Sf() ) )
+      phi <<= ref.fvc.interpolate( rho ) * ( ref.fvc.interpolate( U() ) & mesh.Sf() )
       
       closedVolume = ref.adjustPhi( phi, U, p_rgh )
       
       buoyancyPhi = rhorAUf * ghf * ref.fvc.snGrad( rho ) * mesh.magSf()
       
-      phi().ext_assign( phi() - buoyancyPhi )
+      phi -= buoyancyPhi
 
       for nonOrth in range( simple.nNonOrthCorr() + 1 ):
 
@@ -154,29 +154,29 @@ def fun_pEqn( mesh, runTime, simple, thermo, rho, p, h, psi, U, phi, turbulence,
 
           if nonOrth == simple.nNonOrthCorr():
               # Calculate the conservative fluxes
-              phi().ext_assign( phi() - p_rghEqn.flux() )
+              phi -= p_rghEqn.flux()
               
               # Explicitly relax pressure for momentum corrector
               p_rgh.relax()
               
               # Correct the momentum source with the pressure gradient flux
               # calculated from the relaxed pressure
-              U().ext_assign( U() - rAU * ref.fvc.reconstruct( ( buoyancyPhi + p_rghEqn.flux() ) / rhorAUf ) )
+              U -= rAU * ref.fvc.reconstruct( ( buoyancyPhi + p_rghEqn.flux() ) / rhorAUf )
               U.correctBoundaryConditions()
               pass
           pass
   
       cumulativeContErr = ref.ContinuityErrs( phi, runTime, mesh, cumulativeContErr )
       
-      p.ext_assign( p_rgh + rho * gh )
+      p <<= p_rgh + rho * gh
 
       # For closed-volume cases adjust the pressure level
       # to obey overall mass continuity
       if closedVolume:
-          p().ext_assign( p() + ( initialMass - ref.fvc.domainIntegrate( psi * p ) ) / ref.fvc.domainIntegrate( psi ) )
-          p_rgh.ext_assign( p - rho * gh )
+          p += ( initialMass - ref.fvc.domainIntegrate( psi * p ) ) / ref.fvc.domainIntegrate( psi ) 
+          p_rgh <<= p - rho * gh
           pass
-      rho().ext_assign( thermo.rho() )
+      rho <<= thermo.rho()
       rho.relax()
       
       ref.ext_Info() << "rho max/min : " <<  rho.ext_max().value() << " " << rho.ext_min().value() << ref.nl
